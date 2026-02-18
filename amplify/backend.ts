@@ -5,8 +5,12 @@ import { storage } from './storage/resource';
 import * as rds from 'aws-cdk-lib/aws-rds';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import { CfnOutput, RemovalPolicy } from 'aws-cdk-lib';
+import { postConfirmation } from './functions/post-confirmation/resource';
+import { Function } from 'aws-cdk-lib/aws-lambda';
 
-const backend = defineBackend({ auth, data, storage });
+
+
+const backend = defineBackend({ auth, data, storage, postConfirmation });
 
 const dbStack = backend.createStack('DatabaseStack');
 
@@ -54,6 +58,15 @@ const cluster = new rds.DatabaseCluster(dbStack, 'AuroraCluster', {
   credentials: rds.Credentials.fromGeneratedSecret('postgres'),
   removalPolicy: RemovalPolicy.DESTROY,
 });
+
+const postConfirmationLambda = backend.postConfirmation.resources.lambda as Function;
+cluster.grantDataApiAccess(postConfirmationLambda);
+
+postConfirmationLambda.addEnvironment('CLUSTER_ARN', cluster.clusterArn);
+postConfirmationLambda.addEnvironment(
+  'SECRET_ARN',
+  cluster.secret?.secretArn ?? ''
+);
 
 new CfnOutput(dbStack, 'ClusterEndpoint', {
   value: cluster.clusterEndpoint.hostname,
