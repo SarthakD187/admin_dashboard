@@ -33,7 +33,7 @@ export const handler: PostConfirmationTriggerHandler = async (event) => {
       resourceArn: CLUSTER_ARN,
       secretArn: SECRET_ARN,
       database: DATABASE,
-      sql: `INSERT INTO "User" (id, "businessId", email, role, status) VALUES (:id, :businessId, :email, :role, :status)`,
+      sql: `INSERT INTO "User" (id, "businessId", email, role, status) VALUES (:id, :businessId::uuid, :email, :role, :status)`,
       parameters: [
         { name: 'id', value: { stringValue: sub } },
         { name: 'businessId', value: { stringValue: businessId } },
