@@ -22,7 +22,7 @@ export async function getUserContext(cognitoSub: string): Promise<UserContext> {
       resourceArn: CLUSTER_ARN,
       secretArn: SECRET_ARN,
       database: DATABASE,
-      sql: `SELECT id, "businessId", role, status FROM "User" WHERE id = :id AND status = 'ACTIVE'`,
+      sql: `SELECT id, "businessId", role, status FROM "User" WHERE id::text = :id AND status = 'ACTIVE'`,
       parameters: [{ name: 'id', value: { stringValue: cognitoSub } }],
     })
   );

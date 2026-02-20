@@ -7,10 +7,11 @@ import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import { CfnOutput, RemovalPolicy } from 'aws-cdk-lib';
 import { postConfirmation } from './functions/post-confirmation/resource';
 import { Function } from 'aws-cdk-lib/aws-lambda';
+import { api } from './functions/api/resource';
+import * as apigateway from 'aws-cdk-lib/aws-apigateway';
+import * as cognito from 'aws-cdk-lib/aws-cognito';
 
-
-
-const backend = defineBackend({ auth, data, storage, postConfirmation });
+const backend = defineBackend({ auth, data, storage, postConfirmation, api });
 
 const dbStack = backend.createStack('DatabaseStack');
 
@@ -59,15 +60,6 @@ const cluster = new rds.DatabaseCluster(dbStack, 'AuroraCluster', {
   removalPolicy: RemovalPolicy.DESTROY,
 });
 
-const postConfirmationLambda = backend.postConfirmation.resources.lambda as Function;
-cluster.grantDataApiAccess(postConfirmationLambda);
-
-postConfirmationLambda.addEnvironment('CLUSTER_ARN', cluster.clusterArn);
-postConfirmationLambda.addEnvironment(
-  'SECRET_ARN',
-  cluster.secret?.secretArn ?? ''
-);
-
 new CfnOutput(dbStack, 'ClusterEndpoint', {
   value: cluster.clusterEndpoint.hostname,
   description: 'Aurora cluster writer endpoint',
@@ -76,4 +68,47 @@ new CfnOutput(dbStack, 'ClusterEndpoint', {
 new CfnOutput(dbStack, 'ClusterSecretArn', {
   value: cluster.secret?.secretArn ?? '',
   description: 'Secrets Manager ARN for database credentials',
+});
+
+const postConfirmationLambda = backend.postConfirmation.resources.lambda as Function;
+cluster.grantDataApiAccess(postConfirmationLambda);
+postConfirmationLambda.addEnvironment('CLUSTER_ARN', cluster.clusterArn);
+postConfirmationLambda.addEnvironment('SECRET_ARN', cluster.secret?.secretArn ?? '');
+
+const apiLambda = backend.api.resources.lambda as Function;
+cluster.grantDataApiAccess(apiLambda);
+apiLambda.addEnvironment('CLUSTER_ARN', cluster.clusterArn);
+apiLambda.addEnvironment('SECRET_ARN', cluster.secret?.secretArn ?? '');
+
+// API Gateway in its own stack to avoid circular dependency
+const apiStack = backend.createStack('ApiStack');
+
+const authorizer = new apigateway.CognitoUserPoolsAuthorizer(
+  apiStack,
+  'ApiAuthorizer',
+  { cognitoUserPools: [backend.auth.resources.userPool as cognito.IUserPool] }
+);
+
+const restApi = new apigateway.RestApi(apiStack, 'RestApi', {
+  restApiName: 'admin-dashboard-api',
+  defaultCorsPreflightOptions: {
+    allowOrigins: apigateway.Cors.ALL_ORIGINS,
+    allowMethods: apigateway.Cors.ALL_METHODS,
+    allowHeaders: ['Content-Type', 'Authorization'],
+  },
+});
+
+const proxyResource = restApi.root.addResource('{proxy+}');
+proxyResource.addMethod(
+  'ANY',
+  new apigateway.LambdaIntegration(apiLambda),
+  {
+    authorizer,
+    authorizationType: apigateway.AuthorizationType.COGNITO,
+  }
+);
+
+new CfnOutput(apiStack, 'ApiEndpoint', {
+  value: restApi.url,
+  description: 'REST API endpoint',
 });
