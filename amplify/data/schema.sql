@@ -33,3 +33,16 @@ CREATE TABLE "Activity" (
   amount DECIMAL(10,2),
   "createdAt" TIMESTAMP NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE "User" ADD COLUMN "lastActiveAt" TIMESTAMP;
+
+CREATE TABLE "Invitation" (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  "businessId" UUID NOT NULL REFERENCES "Business"(id),
+  email TEXT NOT NULL,
+  role TEXT NOT NULL CHECK (role IN ('OWNER', 'MANAGER', 'STAFF')),
+  status TEXT NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'ACCEPTED', 'EXPIRED')),
+  "invitedBy" TEXT NOT NULL REFERENCES "User"(id),
+  "expiresAt" TIMESTAMP NOT NULL DEFAULT NOW() + INTERVAL '7 days',
+  "createdAt" TIMESTAMP NOT NULL DEFAULT NOW()
+);
