@@ -11,6 +11,7 @@ import { getCustomer } from './routes/customers/getCustomer';
 import { updateCustomer } from './routes/customers/updateCustomer';
 import { deleteCustomer } from './routes/customers/deleteCustomer';
 import { logActivity } from './routes/activity/logActivity';
+import { getAnalytics } from './routes/analytics/getAnalytics';
 
 export const handler: APIGatewayProxyHandler = async (event) => {
   try {
@@ -48,6 +49,10 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     // Activity routes
     if (path.match(/^customers\/[\w-]+\/activity$/) && method === 'POST')
       return logActivity(userContext, event);
+
+    // Analytics routes
+    if (path === 'analytics' && method === 'GET')
+      return getAnalytics(userContext, event);
 
     return response.error('Not found', 404);
   } catch (err: any) {

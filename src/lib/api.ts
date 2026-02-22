@@ -65,6 +65,10 @@ export const apiClient = {
         body: JSON.stringify(data),
       }),
   },
+
+  analytics: {
+    get: (days = 30) => request<AnalyticsData>(`/analytics?days=${days}`),
+  },
 };
 
 export interface Member {
@@ -96,4 +100,15 @@ export interface Activity {
 
 export interface CustomerDetail extends Customer {
   activities: Activity[];
+}
+
+export interface AnalyticsData {
+  metrics: {
+    customerCount: number;
+    revenueTotal: number;
+    activityCount: number;
+    teamCount: number;
+  };
+  revenueOverTime: { date: string; revenue: number }[];
+  activityByType: { type: string; count: number }[];
 }
