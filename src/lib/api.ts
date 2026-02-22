@@ -1,6 +1,6 @@
 import { fetchAuthSession } from 'aws-amplify/auth';
 
-const API_URL = 'https://4y5hhy0qog.execute-api.us-east-1.amazonaws.com/prod';
+const API_URL = 'https://nrdxnvwjb5.execute-api.us-east-1.amazonaws.com/prod';
 
 async function getAuthHeader(): Promise<Record<string, string>> {
   const session = await fetchAuthSession();
