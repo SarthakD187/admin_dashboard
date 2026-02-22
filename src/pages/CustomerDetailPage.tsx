@@ -1,11 +1,101 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { apiClient, type CustomerDetail } from '@/lib/api';
+import { apiClient, type CustomerDetail, type Activity } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Pencil, Trash2 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { ArrowLeft, Pencil, Trash2, Plus } from 'lucide-react';
 import { CustomerForm } from '@/components/customers/CustomerForm';
+
+const ACTIVITY_TYPES = ['sale', 'call', 'meeting', 'email', 'note', 'other'];
+
+function LogActivityForm({
+  customerId,
+  onSuccess,
+}: {
+  customerId: string;
+  onSuccess: (activity: Activity) => void;
+}) {
+  const [form, setForm] = useState({ type: 'call', description: '', amount: '' });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
+
+  const handleSubmit = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await apiClient.activity.log(customerId, {
+        type: form.type,
+        description: form.description || undefined,
+        amount: form.amount || undefined,
+      });
+      onSuccess(result);
+      setForm({ type: 'call', description: '', amount: '' });
+      setOpen(false);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!open) {
+    return (
+      <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
+        <Plus className="w-4 h-4 mr-1" /> Log Activity
+      </Button>
+    );
+  }
+
+  return (
+    <div className="rounded-lg border bg-white p-4 space-y-4">
+      <h4 className="font-medium text-sm">Log Activity</h4>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1.5">
+          <Label>Type</Label>
+          <select
+            className="w-full border rounded-md px-3 py-2 text-sm"
+            value={form.type}
+            onChange={(e) => setForm({ ...form, type: e.target.value })}
+          >
+            {ACTIVITY_TYPES.map((t) => (
+              <option key={t} value={t}>{t}</option>
+            ))}
+          </select>
+        </div>
+        <div className="space-y-1.5">
+          <Label>Amount (optional)</Label>
+          <Input
+            type="number"
+            placeholder="0.00"
+            value={form.amount}
+            onChange={(e) => setForm({ ...form, amount: e.target.value })}
+          />
+        </div>
+      </div>
+      <div className="space-y-1.5">
+        <Label>Description (optional)</Label>
+        <Input
+          placeholder="What happened?"
+          value={form.description}
+          onChange={(e) => setForm({ ...form, description: e.target.value })}
+        />
+      </div>
+      {error && <p className="text-sm text-red-500">{error}</p>}
+      <div className="flex gap-2">
+        <Button onClick={handleSubmit} disabled={loading} size="sm">
+          {loading ? 'Saving...' : 'Save'}
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => setOpen(false)}>
+          Cancel
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 export function CustomerDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -51,8 +141,12 @@ export function CustomerDetailPage() {
           <Button variant="outline" size="sm" onClick={() => setShowEdit(true)}>
             <Pencil className="w-4 h-4 mr-1" /> Edit
           </Button>
-          <Button variant="outline" size="sm" onClick={handleDelete}
-            className="text-red-600 hover:text-red-700">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDelete}
+            className="text-red-600 hover:text-red-700"
+          >
             <Trash2 className="w-4 h-4 mr-1" /> Delete
           </Button>
         </div>
@@ -89,7 +183,17 @@ export function CustomerDetailPage() {
       </Card>
 
       <div>
-        <h3 className="text-lg font-semibold mb-3">Activity History</h3>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-lg font-semibold">Activity History</h3>
+          <LogActivityForm
+            customerId={customer.id}
+            onSuccess={(activity) =>
+              setCustomer((prev) =>
+                prev ? { ...prev, activities: [activity, ...prev.activities] } : prev
+              )
+            }
+          />
+        </div>
         {customer.activities.length === 0 ? (
           <p className="text-sm text-slate-500">No activity recorded yet.</p>
         ) : (

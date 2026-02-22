@@ -57,6 +57,14 @@ export const apiClient = {
     delete: (id: string) =>
       request(`/customers/${id}`, { method: 'DELETE' }),
   },
+
+  activity: {
+    log: (customerId: string, data: { type: string; description?: string; amount?: string }) =>
+      request<Activity>(`/customers/${customerId}/activity`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+  },
 };
 
 export interface Member {
