@@ -44,6 +44,19 @@ export const apiClient = {
         body: JSON.stringify({ email, role }),
       }),
   },
+
+  customers: {
+    list: (search?: string) =>
+      request<Customer[]>(`/customers${search ? `?search=${encodeURIComponent(search)}` : ''}`),
+    get: (id: string) =>
+      request<CustomerDetail>(`/customers/${id}`),
+    create: (data: Omit<Customer, 'id' | 'createdAt'>) =>
+      request<Customer>('/customers', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: Omit<Customer, 'id' | 'createdAt'>) =>
+      request<Customer>(`/customers/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    delete: (id: string) =>
+      request(`/customers/${id}`, { method: 'DELETE' }),
+  },
 };
 
 export interface Member {
@@ -53,4 +66,26 @@ export interface Member {
   status: 'ACTIVE' | 'INACTIVE';
   createdAt: string;
   lastActiveAt: string | null;
+}
+
+export interface Customer {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  notes: string | null;
+  createdAt: string;
+}
+
+export interface Activity {
+  id: string;
+  type: string;
+  description: string | null;
+  amount: string | null;
+  createdAt: string;
+  userEmail: string;
+}
+
+export interface CustomerDetail extends Customer {
+  activities: Activity[];
 }

@@ -5,6 +5,11 @@ import { listMembers } from './routes/team/listMembers';
 import { updateMemberRole } from './routes/team/updateMemberRole';
 import { updateMemberStatus } from './routes/team/updateMemberStatus';
 import { inviteMember } from './routes/team/inviteMember';
+import { listCustomers } from './routes/customers/listCustomers';
+import { createCustomer } from './routes/customers/createCustomer';
+import { getCustomer } from './routes/customers/getCustomer';
+import { updateCustomer } from './routes/customers/updateCustomer';
+import { deleteCustomer } from './routes/customers/deleteCustomer';
 
 export const handler: APIGatewayProxyHandler = async (event) => {
   try {
@@ -16,6 +21,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     const method = event.httpMethod;
     const path = event.pathParameters?.proxy ?? '';
 
+    
     // Team routes
     if (path === 'team/members' && method === 'GET')
       return listMembers(userContext);
@@ -25,6 +31,18 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       return updateMemberStatus(userContext, event);
     if (path === 'team/invite' && method === 'POST')
       return inviteMember(userContext, event);
+
+    // Customer routes
+    if (path === 'customers' && method === 'GET')
+      return listCustomers(userContext, event);
+    if (path === 'customers' && method === 'POST')
+      return createCustomer(userContext, event);
+    if (path.match(/^customers\/[\w-]+$/) && method === 'GET')
+      return getCustomer(userContext, event);
+    if (path.match(/^customers\/[\w-]+$/) && method === 'PATCH')
+      return updateCustomer(userContext, event);
+    if (path.match(/^customers\/[\w-]+$/) && method === 'DELETE')
+      return deleteCustomer(userContext, event);
 
     return response.error('Not found', 404);
   } catch (err: any) {
